@@ -21,17 +21,17 @@ stdenvNoCC.mkDerivation rec {
   buildInputs = [ sshUtilsOnly makeWrapper ];
 
   installPhase = ''
-    ### Rendre sshrm disponible
+    ### Make sshrm available
     mkdir -p $out/bin $doc/share/doc/${pname}
     cp ${pname} $out/bin/${pname}
 
-    ### Ajouter le fichier de licence accessible dans le répertoire doc
+    ### Add license file accessible on the doc directory
     cp LICENSE $doc/share/doc/${pname}/LICENSE
     cp README.md $doc/share/doc/${pname}/README.md
   '';
 
   postFixup = ''
-    ### Ajouter le chemin d'exécution à l'outil sshrm
+    ### Add runtime path to sshrm tool
     wrapProgram $out/bin/${pname} \
       --set PATH ${lib.makeBinPath [ sshUtilsOnly ]} \
       --set TERM xterm-256color
