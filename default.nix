@@ -8,16 +8,15 @@
 
 { pkgs ? import <nixpkgs> { } }:
 
+with pkgs; 
+let
+  ### Define pkgs/default.nix as nurpkgs (to define packages on this flake)
+  nurPkgs = pkgs.callPackages ./pkgs {};
+in
+
 {
   # The `lib`, `modules`, and `overlays` names are special
   lib = import ./lib { inherit pkgs; }; # functions
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
-
-  sshrm = pkgs.callPackage ./pkgs/sshrm {};
-  fhsEnv-dev = pkgs.callPackage ./pkgs/fhsEnv-dev {};
-  GLFfetch = pkgs.callPackage ./pkgs/GLFfetch {};
-  GLFfetch-glfos = pkgs.callPackage ./pkgs/GLFfetch { glfIcon = "GLFos"; };
-  # some-qt5-package = pkgs.libsForQt5.callPackage ./pkgs/some-qt5-package { };
-  # ...
-}
+} // nurPkgs
