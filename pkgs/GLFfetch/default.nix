@@ -1,4 +1,5 @@
 { 
+  lib,
   stdenvNoCC, 
   substituteAll, 
   writeScriptBin, 
@@ -63,4 +64,12 @@ stdenvNoCC.mkDerivation rec {
 
     ln -s $out/bin/GLFfetch $out/bin/GLFfetch-nixos
   '';
+  
+  meta = {
+    description = "A another 'fetch', but with custom configuration (build with fastfetch)";
+    homepage = "https://github.com/Gaming-Linux-FR/GLFfetch";
+    license = lib.licenses.mit;
+    mainProgram = "GLFfetch";
+  };
+
 }

@@ -5,14 +5,13 @@ let
   sshUtilsOnly = callPackage ./deps/sshUtilsOnly.nix {};
 in
 
- stdenvNoCC.mkDerivation rec {
-   repoName = "sshrm";
-   pname = "sshrm";
-   version = "git-${builtins.substring 0 7 src.rev}"; ### Update dynamically the version number (based on git commit version)
+stdenvNoCC.mkDerivation rec {
+  pname = "sshrm";
+  version = "git-${builtins.substring 0 7 src.rev}";
 
   src = fetchFromGitHub {
     owner = "aaaaadrien";
-    repo = repoName;
+    repo = pname;
     rev = "0803f982130ebcceb43abe4fe84da3541856ed46";
     sha256 = "sha256-Sm9RAK6UdvL0yHfE12gIjoLfy3pZBqgRtfm20X1FWm0=";
   };
@@ -22,19 +21,26 @@ in
   buildInputs = [ sshUtilsOnly makeWrapper ];
 
   installPhase = ''
-    ### Make sshrm available
+    ### Rendre sshrm disponible
     mkdir -p $out/bin $doc/share/doc/${pname}
     cp ${pname} $out/bin/${pname}
 
-    ### Add license file accessible on the doc directory
+    ### Ajouter le fichier de licence accessible dans le répertoire doc
     cp LICENSE $doc/share/doc/${pname}/LICENSE
     cp README.md $doc/share/doc/${pname}/README.md
   '';
-  
+
   postFixup = ''
-    ### Add runtime path to sshrm tool
+    ### Ajouter le chemin d'exécution à l'outil sshrm
     wrapProgram $out/bin/${pname} \
       --set PATH ${lib.makeBinPath [ sshUtilsOnly ]} \
       --set TERM xterm-256color
   '';
- }
+
+  meta = {
+    description = "A tool to remove quickly all keys belonging to the specified host from a known_hosts file.";
+    homepage = "https://github.com/aaaaadrien/sshrm";
+    license = lib.licenses.mit;
+    mainProgram = "sshrm";
+  };
+}
