@@ -14,7 +14,10 @@
   modules = import ./modules; # NixOS modules
   overlays = import ./overlays; # nixpkgs overlays
 
-  example-package = pkgs.callPackage ./pkgs/example-package { };
+  sshrm = pkgs.callPackage ./pkgs/sshrm {};
+  fhsEnv-dev = pkgs.callPackage ./pkgs/fhsEnv-dev {};
+  GLFfetch = pkgs.callPackage ./pkgs/GLFfetch {};
+  GLFfetch-glfos = pkgs.callPackage ./pkgs/GLFfetch { glfIcon = "GLFos"; };
   # some-qt5-package = pkgs.libsForQt5.callPackage ./pkgs/some-qt5-package { };
   # ...
 }
