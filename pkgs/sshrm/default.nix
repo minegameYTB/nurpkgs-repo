@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, openssh, makeWrapper, fetchFromGitHub, callPackage }:
+{ lib, stdenvNoCC, makeWrapper, fetchFromGitHub, callPackage }:
 
 let
   ### Import sshUtilsOnly derivation
@@ -16,18 +16,16 @@ stdenvNoCC.mkDerivation rec {
     sha256 = "sha256-Sm9RAK6UdvL0yHfE12gIjoLfy3pZBqgRtfm20X1FWm0=";
   };
 
-  outputs = [ "out" "doc" ];
-  outputsToInstall = outputs;
   buildInputs = [ sshUtilsOnly makeWrapper ];
 
   installPhase = ''
     ### Make sshrm available
-    mkdir -p $out/bin $doc/share/doc/${pname}
+    mkdir -p $out/bin $out/share/doc/${pname}
     cp ${pname} $out/bin/${pname}
 
     ### Add license file accessible on the doc directory
-    cp LICENSE $doc/share/doc/${pname}/LICENSE
-    cp README.md $doc/share/doc/${pname}/README.md
+    cp LICENSE $out/share/doc/${pname}/LICENSE
+    cp README.md $out/share/doc/${pname}/README.md
   '';
 
   postFixup = ''
