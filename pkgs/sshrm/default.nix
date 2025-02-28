@@ -42,6 +42,6 @@ stdenvNoCC.mkDerivation rec {
     homepage = "https://github.com/aaaaadrien/sshrm";
     license = lib.licenses.mit;
     mainProgram = "sshrm";
-    sourceProvenance = [ lib.sourceTypes.fromSource ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 }
