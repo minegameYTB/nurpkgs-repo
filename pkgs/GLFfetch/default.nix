@@ -60,7 +60,7 @@ stdenvNoCC.mkDerivation rec {
     ### Make wrapper script that pass right args to fastfetch
     makeWrapper ${fastfetch}/bin/fastfetch $out/bin/GLFfetch \
       --add-flags "--config $assets/share/${pname}/challenge.jsonc" \
-      --prefix PATH : ${coreutils}/bin:${gawk}/bin
+      --set PATH ${lib.makeBinPath [ coreutils gawk ]}
   '';
   
   meta = {
