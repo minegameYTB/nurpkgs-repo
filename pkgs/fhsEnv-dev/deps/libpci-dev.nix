@@ -1,4 +1,4 @@
-{ stdenvNoCC, dpkg, lib, fetchurl, tree }:
+{ stdenvNoCC, dpkg, lib, fetchurl }:
 
 stdenvNoCC.mkDerivation rec {
   pname = "libpci-dev";
@@ -6,11 +6,11 @@ stdenvNoCC.mkDerivation rec {
   arch = "amd64";
 
   src = fetchurl {
-    url = "http://ftp.fr.debian.org/debian/pool/main/p/pciutils/${pname}_${version}_${arch}.deb";
+    url = "https://snapshot.debian.org/archive/debian/20241102T084005Z/pool/main/p/pciutils/${pname}_${version}_${arch}.deb";
     sha256 = "sha256-ceNDassfgQsGyB9pdpus80C1BqXPMFLr6Z9MJq7xViI=";
   };
 
-  nativeBuildInputs = [ dpkg tree ];
+  nativeBuildInputs = [ dpkg ];
 
   unpackPhase = ''
     dpkg -x $src .
@@ -19,7 +19,6 @@ stdenvNoCC.mkDerivation rec {
   installPhase = ''
     mkdir -p $out
     cp -r usr/* $out/
-    tree $out
   '';
 
   meta = with lib; {

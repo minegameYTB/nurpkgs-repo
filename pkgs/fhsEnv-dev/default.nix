@@ -2,7 +2,7 @@
 
 let
   ### import libpci-dev from debian sid repo
-  libpci-dev = callPackage ./libpci-dev.nix {};
+  libpci-dev = callPackage ./deps/libpci-dev.nix {};
   fhsEnv = buildFHSEnv {
     name = "fhsEnv";
     targetPkgs = pkgs: with pkgs; [    
@@ -90,8 +90,8 @@ stdenvNoCC.mkDerivation rec {
 
   installPhase = ''
     ### Make fhsEnv-shell available
-    mkdir -p $out/bin
-    ln -s ${fhsEnv}/bin/fhsEnv $out/bin/fhsEnv-shell
+    mkdir -p $out
+    ln -s ${fhsEnv}/bin $out/bin
   '';
 
   meta = with lib; {
