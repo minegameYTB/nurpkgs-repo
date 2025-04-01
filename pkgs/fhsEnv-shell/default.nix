@@ -4,6 +4,7 @@
  lib,
  libsForQt5,
  zlib,
+ elfutils,
  pkgs,
  gcc,
  ncurses,
@@ -146,13 +147,15 @@ let
       export CXX="${if useClang then "clang++" else "g++"}"
 
       ${lib.optionalString kernel-tools ''
-        ### Add env variable for qt5 (kernel-tools = true)
-        export PKG_CONFIG_PATH="${ncurses.dev}/lib/pkgconfig:${libsForQt5.qt5.qtbase.dev}/lib/pkgconfig:${zlib.dev}/lib/pkgconfig"    
+        ### Special flags for kernel build (explicite path)
         export QT_QPA_PLATFORM_PLUGIN_PATH="${libsForQt5.qt5.qtbase.bin}/lib/qt-${libsForQt5.qt5.qtbase.version}/plugins"
-        export LD_LIBRARY_PATH="${zlib.out}/lib:$LD_LIBRARY_PATH"
-        export LIBRARY_PATH="${zlib.out}/lib:$LIBRARY_PATH"
-        export CFLAGS="-I${zlib.dev}/include $CFLAGS"
-        export LDFLAGS="-L${zlib.out}/lib -lz $LDFLAGS"
+
+        export PKG_CONFIG_PATH="${ncurses.dev}/lib/pkgconfig:${libsForQt5.qt5.qtbase.dev}/lib/pkgconfig:${zlib.dev}/lib/pkgconfig:${elfutils.dev}/lib/pkgconfig"
+
+        export LD_LIBRARY_PATH="${zlib.out}/lib:${elfutils.out}/lib:$LD_LIBRARY_PATH"
+        export LIBRARY_PATH="${zlib.out}/lib:${elfutils.out}/lib:$LIBRARY_PATH"
+        export CFLAGS="-I${zlib.dev}/include -I${elfutils.dev}/include $CFLAGS"
+        export LDFLAGS="-L${zlib.out}/lib -L${elfutils.out}/lib -lelf -lz $LDFLAGS"
       ''}
       ### Custom PS1 for the shell environment (NixOS style)
       export PROMPT_COMMAND='PS1="\[\e[1;32m\][fhsEnv-shell:\w]\$\[\e[0m\] "'
