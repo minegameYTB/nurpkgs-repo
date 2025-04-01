@@ -160,7 +160,7 @@ let
       exec ${bashInteractive}/bin/bash
     '';
   };
-in stdenv.mkDerivation {
+in stdenvNoCC.mkDerivation {
   pname = "fhsEnv-shell";
   version = gcc.version;
 
