@@ -19,7 +19,7 @@
 
 let
   ### System configuration (host platform)
-  system = lib.systems.elaborate stdenv.hostPlatform;
+  system = lib.systems.elaborate stdenvNoCC.hostPlatform;
 
   fhsEnv = buildFHSEnv {
     name = "fhsEnv-shell";
