@@ -40,6 +40,7 @@ let
       nettools
       man 
       which
+      procps
       iputils
       file
       findutils
