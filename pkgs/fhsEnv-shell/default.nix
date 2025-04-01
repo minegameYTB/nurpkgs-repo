@@ -35,6 +35,7 @@ let
 
       ### Coreutils
       coreutils-full
+      kmod
       nettools
       man 
       which
@@ -47,6 +48,10 @@ let
       man
       lsd
       bat
+
+      ### Text editor
+      nano
+      vim
 
       ### Version manager
       git
