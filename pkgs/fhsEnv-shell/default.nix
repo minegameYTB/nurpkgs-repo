@@ -3,15 +3,19 @@
  buildFHSEnv,
  lib,
  libsForQt5,
+ zlib,
  pkgs,
  gcc,
  ncurses,
+ bash,
  bashInteractive,
  writeScript,
  kernel-tools ? false,  ### Option to enable kernel development tools
  buildroot-tools ? false,  ### Option to enable Buildroot-specific tools
  useClang ? false, ### Enable this to use clang instead of gcc
- test ? false
+ test ? false, ### For testing only
+ debian-tools ? false, ### Add debian tools (to prepare debian package)
+ redhat-tools ? false  ### Add fedora and RHEL (and clone) tools (same as debian-tools option)
 }:
 
 let
@@ -25,37 +29,61 @@ let
     name = "fhsEnv-shell";
     targetPkgs = pkgs: with pkgs; [
       ### Core compilation tools (always included)
-      nettools
-      ncurses5
+      ### Compiler and tools
       (if useClang then clang else gcc)
+      pkg-config
       gnumake
       gnupatch
+
+      ### Coreutils
+      coreutils-full
+      nettools
+      man 
+      which
+      iputils
+      file
+      findutils
+      util-linux
+      bc
+      man
+      lsd
+      bat
+
+      ### Version manager
       git
+      subversion
+      
+      ### Archive
       gnutar
       gzip
       bzip2
       xz
+      cpio
+      unzip
+
+      ### Network and cryptography
       rsync
       wget
-      cpio
-      perl
-      python3
-      which
-      file
-      findutils
-      util-linux
       openssl
-      bc
-      unzip
-      pkg-config
 
-      ### Additional essential tools for compatibility and flexibility
+      ### Programming language
+      python3
+      perl
+      ncurses5 ### For Text User Interface
+
+      ### Additional essential tools for compatibility
       flex
       bison
       gawk
       gettext
       texinfo
-    ] ++ lib.optionals kernel-tools ([
+
+      ### Additional package
+      autoconf
+      automake
+    ] ++ lib.optionals useClang ([
+      clang-manpages
+    ]) ++ lib.optionals kernel-tools ([
       ### Kernel-specific tools (enabled with kernel-tools = true)
       libsForQt5.qt5.qtbase
       libcap_ng
@@ -87,14 +115,24 @@ let
       libelf
       mpfr
       gmp
-    ]) ++ lib.optionals test ([
-      cowsay
-      hello
+    ]) ++ lib.optionals debian-tools ([
+      ### Debian package
+      dpkg
+      apt
+      
+      ### Use glibc.dev to match with build-essential package on debian
+      glibc.dev
+    ]) ++ lib.optionals redhat-tools ([
+      ### RedHat package
+      rpm
+      dnf5
     ]);
 
     ### Shell script that run automacally when enterred in this environment
     runScript = pkgs.writeScript "init.sh" ''
+      #! ${bash}/bin/bash
       ### Environment variables
+      export PATH=/bin:/sbin:$HOME/bin:$HOME/.local/bin
       export ARCH=${lib.head (lib.splitString "-" system.config)}
       export hardeningDisable=all
 
@@ -104,8 +142,12 @@ let
 
       ${lib.optionalString kernel-tools ''
         ### Add env variable for qt5 (kernel-tools = true)
-        export PKG_CONFIG_PATH="${ncurses.dev}/lib/pkgconfig:${libsForQt5.qt5.qtbase.dev}/lib/pkgconfig"    
+        export PKG_CONFIG_PATH="${ncurses.dev}/lib/pkgconfig:${libsForQt5.qt5.qtbase.dev}/lib/pkgconfig:${zlib.dev}/lib/pkgconfig"    
         export QT_QPA_PLATFORM_PLUGIN_PATH="${libsForQt5.qt5.qtbase.bin}/lib/qt-${libsForQt5.qt5.qtbase.version}/plugins"
+        export LD_LIBRARY_PATH="${zlib.out}/lib:$LD_LIBRARY_PATH"
+        export LIBRARY_PATH="${zlib.out}/lib:$LIBRARY_PATH"
+        export CFLAGS="-I${zlib.dev}/include $CFLAGS"
+        export LDFLAGS="-L${zlib.out}/lib -lz $LDFLAGS"
       ''}
       ### Custom PS1 for the shell environment (NixOS style)
       export PROMPT_COMMAND='PS1="\[\e[1;32m\][fhsEnv-shell:\w]\$\[\e[0m\] "'
