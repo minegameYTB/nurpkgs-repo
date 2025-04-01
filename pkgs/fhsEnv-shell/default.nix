@@ -13,7 +13,6 @@
  kernel-tools ? false,  ### Option to enable kernel development tools
  buildroot-tools ? false,  ### Option to enable Buildroot-specific tools
  useClang ? false, ### Enable this to use clang instead of gcc
- test ? false, ### For testing only
  debian-tools ? false, ### Add debian tools (to prepare debian package)
  redhat-tools ? false  ### Add fedora and RHEL (and clone) tools (same as debian-tools option)
 }:
