@@ -18,9 +18,6 @@
 }:
 
 let
-  ### Selection of stdenv based on the chosen compiler
-  stdenv = if useClang then pkgs.clangStdenv else pkgs.stdenv;
-
   ### System configuration (host platform)
   system = lib.systems.elaborate stdenv.hostPlatform;
 
@@ -147,7 +144,7 @@ let
       export CXX="${if useClang then "clang++" else "g++"}"
 
       ${lib.optionalString kernel-tools ''
-        ### Special flags for kernel build (explicite path)
+        ### Special flags for kernel build (explicit path)
         export QT_QPA_PLATFORM_PLUGIN_PATH="${libsForQt5.qt5.qtbase.bin}/lib/qt-${libsForQt5.qt5.qtbase.version}/plugins"
 
         export PKG_CONFIG_PATH="${ncurses.dev}/lib/pkgconfig:${libsForQt5.qt5.qtbase.dev}/lib/pkgconfig:${zlib.dev}/lib/pkgconfig:${elfutils.dev}/lib/pkgconfig"
