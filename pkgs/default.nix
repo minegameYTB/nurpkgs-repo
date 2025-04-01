@@ -30,7 +30,7 @@
    
    ### All configuration (With or without clang)
    fhsEnv-shell-all = callPackage ./fhsEnv-shell { kernel-tools = true; buildroot-tools = true; };
-   fhsEnv-shell-all-specific = callPackage ./fhsEnv-shell { redhat-tools = true; debian-tools; kernel-tools = true; buildroot-tools = true; };
+   fhsEnv-shell-all-specific = callPackage ./fhsEnv-shell { redhat-tools = true; debian-tools = true; kernel-tools = true; buildroot-tools = true; };
    fhsEnv-shell-all-specific-nokrnl = callPackage ./fhsEnv-shell { redhat-tools = true; debian-tools = true; buildroot-tools = true; useClang = true;};
  };
 
