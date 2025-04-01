@@ -136,7 +136,8 @@ let
     ### Shell script that run automacally when enterred in this environment
     runScript = pkgs.writeScript "init.sh" ''
       ### Environment variables
-      export PATH=/bin:/sbin:$HOME/bin:$HOME/.local/bin
+      export PATH=/bin:/sbin:/usr/bin:/usr/sbin:$HOME/bin:$HOME/.local/bin
+      export TERM=xterm-256color
       export ARCH=${lib.head (lib.splitString "-" system.config)}
       export hardeningDisable=all
 
