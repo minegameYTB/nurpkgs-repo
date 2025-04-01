@@ -7,7 +7,6 @@
  pkgs,
  gcc,
  ncurses,
- bash,
  bashInteractive,
  writeScript,
  kernel-tools ? false,  ### Option to enable kernel development tools
@@ -64,6 +63,7 @@ let
       ### Network and cryptography
       rsync
       wget
+      wget2 ### In case of wget is aliases to wget2
       openssl
 
       ### Programming language
@@ -130,7 +130,6 @@ let
 
     ### Shell script that run automacally when enterred in this environment
     runScript = pkgs.writeScript "init.sh" ''
-      #! ${bash}/bin/bash
       ### Environment variables
       export PATH=/bin:/sbin:$HOME/bin:$HOME/.local/bin
       export ARCH=${lib.head (lib.splitString "-" system.config)}
