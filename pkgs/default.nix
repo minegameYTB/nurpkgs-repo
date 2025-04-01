@@ -2,10 +2,19 @@
 
 {
  ### Utilities
- sshrm = callPackage ./sshrm {};
- fhsEnv-dev = callPackage ./fhsEnv-dev {};
+ sshrm = callPackage ./sshrm {}; 
  GLFfetch = callPackage ./GLFfetch {};
  GLFfetch-glfos = callPackage ./GLFfetch { glfIcon = "GLFos"; };
+
+ ### dev set
+ dev = {
+   fhsEnv-shell = callPackage ./fhsEnv-shell {};
+   fhsEnv-shell-clang = callPackage ./fhsEnv-shell { useClang = true; };
+   fhsEnv-shell-krnl = callPackage ./fhsEnv-shell { kernel-tools = true; };
+   fhsEnv-shell-buildroot = callPackage ./fhsEnv-shell { buildroot-tools = true; };
+   fhsEnv-shell-all = callPackage ./fhsEnv-shell { kernel-tools = true; buildroot-tools = true; };
+   fhsEnv-shell-all-clang = callPackage ./fhsEnv-shell { kernel-tools = true; buildroot-tools = true; };
+ };
 
  ### Theme sets
  theme = {
