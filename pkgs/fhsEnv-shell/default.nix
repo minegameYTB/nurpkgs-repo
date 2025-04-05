@@ -104,6 +104,7 @@ let
 
       ### Iso tools
       syslinux
+      cdrkit
     ] ++ pkgs.linux.nativeBuildInputs) ++ lib.optionals buildroot-tools ([
       ### Buildroot-specific tools (enabled with buildroot-tools = true) 
       ### When kernel-tools is not used, include these tools in case
