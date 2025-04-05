@@ -101,6 +101,9 @@ let
       openssl.dev
       ncurses5.dev
       libsForQt5.qt5.qtbase.dev
+
+      ### Iso tools
+      syslinux
     ] ++ pkgs.linux.nativeBuildInputs) ++ lib.optionals buildroot-tools ([
       ### Buildroot-specific tools (enabled with buildroot-tools = true) 
       ### When kernel-tools is not used, include these tools in case
