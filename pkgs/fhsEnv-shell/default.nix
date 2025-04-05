@@ -62,6 +62,7 @@ let
       xz
       cpio
       unzip
+      lz4
 
       ### Network and cryptography
       rsync
