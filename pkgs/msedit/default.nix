@@ -41,4 +41,3 @@ rustPlatform.buildRustPackage rec {
     mainProgram = "msedit";
   };
 }
-
