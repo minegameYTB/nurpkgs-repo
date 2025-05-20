@@ -18,6 +18,8 @@ rustPlatform.buildRustPackage rec {
     rev = "v${version}";
     hash = "sha256-5GUAHa0/7k4uVNWEjn0hd1YvkRnUk6AdxTQhw5z95BY=";
   };
+
+  ### hash from cargo.lock to the edit repository
   cargoHash = "sha256-DEzjfrXSmum/GJdYanaRDKxG4+eNPWf5echLhStxcIg=";
 
   postInstall = ''
@@ -27,6 +29,9 @@ rustPlatform.buildRustPackage rec {
     ### Move files in this directory
     cp $src/LICENSE $out/share/doc/${pname}
     cp $src/README.md $out/share/doc/${pname}
+
+    ### rename "edit" to "msedit"
+    mv $out/bin/edit $out/bin/msedit
   '';
 }
 
