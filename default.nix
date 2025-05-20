@@ -6,7 +6,7 @@
 # commands such as:
 #     nix-build -A mypackage
 
-{ pkgs }:
+{ pkgs ? import <nixpkgs> { } }:
 
 with pkgs; 
 let
