@@ -10,11 +10,16 @@
   outputs = { self, nixpkgs, rust-overlay }:
     let
       forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+      pkgs = import nixpkgs {
+         ### Import rust-overlay to pkgs attribute
+        inherit system;
+        overlays = [ rust-overlay.overlays.default ];
+      };
     in
     {
       legacyPackages = forAllSystems (system:
         let
-          # Applique rust-overlay à nixpkgs
+          ### Add rust-overlay
           pkgs = import nixpkgs {
             inherit system;
             overlays = [ rust-overlay.overlays.default ];
@@ -24,8 +29,6 @@
           inherit pkgs;
         }
       );
-
       packages = forAllSystems (system: nixpkgs.lib.filterAttrs (_: v: nixpkgs.lib.isDerivation v) self.legacyPackages.${system});
-
     };
 }
