@@ -9,15 +9,24 @@ let
 in
 
 rustPlatform.buildRustPackage rec {
-  pname = "edit";
+  pname = "msedit";
   version = "1.0.0";
 
   src = fetchFromGitHub {
     owner = "microsoft";
-    repo = pname;
+    repo = "edit";
     rev = "v${version}";
     hash = "sha256-5GUAHa0/7k4uVNWEjn0hd1YvkRnUk6AdxTQhw5z95BY=";
   };
   cargoHash = "sha256-DEzjfrXSmum/GJdYanaRDKxG4+eNPWf5echLhStxcIg=";
+
+  postInstall = ''
+    ### Create doc directory
+    mkdir -p $out/share/doc/${pname}
+
+    ### Move files in this directory
+    cp $src/LICENSE $out/share/doc/${pname}
+    cp $src/README.md $out/share/doc/${pname}
+  '';
 }
 
