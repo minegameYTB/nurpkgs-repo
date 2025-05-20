@@ -76,7 +76,8 @@ jobs:
     #      -I $PWD
     
     - name: Build nix packages
-      run: nix shell -f '<nixpkgs>' nix-build-uncached -c nix-build-uncached ci.nix -A cacheOutputs
+      run: nix shell nixpkgs#nix -c nix-instantiate ci.nix --arg pkgs \
+        'import (builtins.getFlake (toString ./.)).pkgsForAll.x86_64-linux {}'
     
     - name: Trigger NUR update
       # Don't replace <YOUR_REPO_NAME> here!
