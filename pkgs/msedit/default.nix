@@ -33,5 +33,12 @@ rustPlatform.buildRustPackage rec {
     ### rename "edit" to "msedit"
     mv $out/bin/edit $out/bin/msedit
   '';
+    
+  meta = {
+    description = "A simple editor for simple needs.";
+    homepage = "https://github.com/microsoft/edit";
+    license = lib.licenses.mit;
+    mainProgram = "msedit";
+  };
 }
 
