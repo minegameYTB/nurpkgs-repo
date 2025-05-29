@@ -5,7 +5,7 @@
  sshrm = callPackage ./sshrm {}; 
  GLFfetch = callPackage ./GLFfetch {};
  GLFfetch-glfos = callPackage ./GLFfetch { glfIcon = "GLFos"; };
- msedit-bin = callPackage ./msedit {};
+ msedit-bin = callPackage ./msedit-bin {};
 
  ### dev set
  dev = {
