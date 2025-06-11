@@ -1,22 +1,13 @@
-{ lib, stdenvNoCC, fetchurl, xz, autoPatchelfHook }:
-
-let
-  system = stdenvNoCC.hostPlatform.system;
-  archMap = {
-    "x86_64-linux" = "x86_64-linux-gnu";
-    "aarch64-linux" = "aarch64-linux-gnu";
-  };
-  archSuffix = archMap.${system} or (throw "Unsupported system: ${system}");
-in
+{ lib, stdenvNoCC, fetchurl, gnutar, zstd, autoPatchelfHook }:
 
 stdenvNoCC.mkDerivation rec {
   ### Name this program with this name bc edit already exist (not the same program)
   pname = "msedit";
-  version = "1.0.0";
+  version = "1.2.0";
 
   src = fetchurl {
-    url = "https://github.com/microsoft/edit/releases/download/v${version}/edit-${version}-${archSuffix}.xz";
-    sha256 = "sha256-vattsWsWezjvMY55cqEActVixMotuibqfqM88aEGpvo=";
+    url = "https://github.com/microsoft/edit/releases/download/v${version}/edit-${version}-x86_64-linux-gnu.tar.zst";
+    sha256 = "sha256-runy8h68kMwdv7IO6T06oD0yUSeo4/f5HdAsWp4KeyU=";
   };
   
   ### stdenv options
@@ -25,14 +16,24 @@ stdenvNoCC.mkDerivation rec {
   dontConfigure = true;
   sourceRoot = ".";
 
-  nativeBuildInputs = [ xz autoPatchelfHook ];
+  nativeBuildInputs = [
+    ### tools for decompression
+    gnutar
+    zstd
+
+    ### Auto-patch program
+    autoPatchelfHook
+  ];
 
   installPhase = ''
     ### Create directory and move binary
     mkdir -p $out/bin
     
     ### Move program to $out/bin/
-    unxz -c $src > $out/bin/${pname}
+    tar --use-compress-program=unzstd -xf $src -C $out/bin/
+    
+    ### Rename edit to msedit (from the archive)
+    mv $out/bin/edit $out/bin/${pname}
 
     ### Make this program executable
     chmod +x $out/bin/${pname}
