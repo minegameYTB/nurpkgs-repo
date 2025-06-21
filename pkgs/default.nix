@@ -6,6 +6,7 @@
  GLFfetch = callPackage ./GLFfetch {};
  GLFfetch-glfos = callPackage ./GLFfetch { glfIcon = "GLFos"; };
  msedit-bin = callPackage ./msedit-bin {};
+ msedit-rs = callPackage ./msedit-rs {};
 
  ### dev set
  dev = {
