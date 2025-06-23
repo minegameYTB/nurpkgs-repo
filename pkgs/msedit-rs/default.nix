@@ -10,7 +10,7 @@
 let
   ### pin rust nightly with fenix project (fenix : https://github.com/nix-community/fenix)
   ### (based on https://github.com/dtomvan/nur-packages/blob/0d9b84b67786425c259ecdb83f7a88165f06395d/pkgs/microsoft-edit/package.nix#L14)
-  fenixToolchain = import ../rustSupport/buildSupportNightly.nix { inherit pkgs;};
+  fenixToolchain = import ../rustSupport/buildSupportNightly.nix { inherit pkgs; };
   rustPlatform = makeRustPlatform {
     inherit (fenixToolchain) cargo rustc;
   };
