@@ -6,11 +6,9 @@
  GLFfetch = callPackage ./GLFfetch {};
  GLFfetch-glfos = callPackage ./GLFfetch { glfIcon = "GLFos"; };
 
- ### Editor set
- editor = {
-   msedit-bin = callPackage ./msedit-bin {};
-   msedit-rs = callPackage ./msedit-rs {};
- };
+ ### Editor
+ msedit-bin = callPackage ./msedit-bin {};
+ msedit-rs = callPackage ./msedit-rs {};
 
  ### dev set
  dev = {
