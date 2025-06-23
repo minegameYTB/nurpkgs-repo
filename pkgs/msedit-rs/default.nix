@@ -1,5 +1,10 @@
-### Wait for rustc-1.87 (master => nixos-unstable) (state here: https://nixpk.gs/pr-tracker.html?pr=407444)
-{ pkgs, lib, stdenv, rustPlatform, fetchFromGitHub }:
+{
+  lib, 
+  rustPlatform,
+  icu,
+  makeWrapper,
+  fetchFromGitHub
+}:
 
 rustPlatform.buildRustPackage rec {
   pname = "msedit";
@@ -21,6 +26,9 @@ rustPlatform.buildRustPackage rec {
   ### Disable install check (found here: https://github.com/RossSmyth/nixpkgs/blob/4f09843cb4edf26fac02a021eecfd9e5af0e5206/pkgs/by-name/ms/ms-edit/package.nix)
   doInstallCheck = false;
 
+  ### Build inputs
+  nativeBuildInputs = [ makeWrapper ];
+
   postInstall = ''
     ### Create doc directory
     mkdir -p $out/share/doc/${pname}
@@ -31,6 +39,11 @@ rustPlatform.buildRustPackage rec {
 
     ### rename "edit" to "msedit"
     mv $out/bin/edit $out/bin/msedit
+    
+    ### Add icu ("Unicode and globalization support library") to the app environment
+    ### (based on https://github.com/dtomvan/nur-packages/blob/0d9b84b67786425c259ecdb83f7a88165f06395d/pkgs/microsoft-edit/package.nix)
+    wrapProgram $out/bin/msedit \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ icu ]}
   '';
     
   meta = {
