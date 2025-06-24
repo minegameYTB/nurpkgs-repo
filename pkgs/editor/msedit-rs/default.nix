@@ -1,3 +1,4 @@
+### Nix expression enhanced with the help of @dtomvan and @RossSmyth on github with thier nix expressions
 {
   pkgs,
   lib, 
