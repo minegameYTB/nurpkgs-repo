@@ -9,7 +9,18 @@
  ### Editor set
  editor = {
    msedit-bin = callPackage ./editor/msedit-bin {};
-   msedit = callPackage ./editor/msedit-rs {};
+   msedit = callPackage ./editor/msedit {};
+   msedit-rs = let
+     warnPackage = callPackage ./editor/msedit {};
+   in
+   builtins.warn 
+   ### Start message
+     "[2025/06/24] editor.msedit-rs has been renamed to editor.msedit to avoid confusion.
+      the binary package (from microsoft's github repository) is still available,
+      compilation times for msedit (non bin) may be long depending on your machine.
+      consider migrating to the new attribute before it is removed in 1 month (from the addition of this notice)."
+   ### End message
+   warnPackage;
  };
 
  ### dev set
