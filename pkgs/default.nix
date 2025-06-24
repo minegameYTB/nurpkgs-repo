@@ -9,7 +9,7 @@
  ### Editor set
  editor = {
    msedit-bin = callPackage ./editor/msedit-bin {};
-   msedit-rs = callPackage ./editor/msedit-rs {};
+   msedit = callPackage ./editor/msedit-rs {};
  };
 
  ### dev set
