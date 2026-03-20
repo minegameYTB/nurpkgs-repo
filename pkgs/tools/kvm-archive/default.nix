@@ -13,8 +13,6 @@
   zstd,
 }:
 
-### found here (https://blog.lazy-evaluation.net/posts/linux/gsettings-diff.html (web archive: https://web.archive.org/web/20250323112054/https://blog.lazy-evaluation.net/posts/linux/gsettings-diff.html))
-
 stdenvNoCC.mkDerivation rec {
   pname = "kvm-archive";
   version = "0.0.0";
