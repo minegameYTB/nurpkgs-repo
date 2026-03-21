@@ -55,6 +55,7 @@ stdenvNoCC.mkDerivation rec {
       --set PATH ${
         lib.makeBinPath [
           coreutils
+          getent
           gnused
           findutils
           gnugrep
