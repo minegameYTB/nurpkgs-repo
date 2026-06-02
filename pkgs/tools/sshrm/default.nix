@@ -14,14 +14,9 @@ in
 
 stdenvNoCC.mkDerivation rec {
   pname = "sshrm";
-  version = "git-${builtins.substring 0 7 src.rev}";
+  version = "0.0.0";
 
-  src = fetchFromGitHub {
-    owner = "aaaaadrien";
-    repo = pname;
-    rev = "0803f982130ebcceb43abe4fe84da3541856ed46";
-    sha256 = "sha256-Sm9RAK6UdvL0yHfE12gIjoLfy3pZBqgRtfm20X1FWm0=";
-  };
+  src = ./sshrm;
 
   buildInputs = [
     sshUtilsOnly
@@ -33,10 +28,6 @@ stdenvNoCC.mkDerivation rec {
     ### Make sshrm available
     mkdir -p $out/bin $out/share/doc/${pname}
     cp ${pname} $out/bin/${pname}
-
-    ### Add license file accessible on the doc directory
-    cp LICENSE $out/share/doc/${pname}/LICENSE
-    cp README.md $out/share/doc/${pname}/README.md
   '';
 
   postFixup = ''
