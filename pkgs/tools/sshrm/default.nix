@@ -2,7 +2,6 @@
   lib,
   stdenvNoCC,
   makeWrapper,
-  fetchFromGitHub,
   callPackage,
   coreutils,
 }:
@@ -11,12 +10,17 @@ let
   ### Import sshUtilsOnly derivation
   sshUtilsOnly = callPackage ./deps/sshUtilsOnly.nix { };
 in
-
 stdenvNoCC.mkDerivation rec {
   pname = "sshrm";
   version = "0.0.0";
 
   src = ./sshrm;
+
+  ### Option
+  dontUnpack = true;
+  dontBuild = true;
+  dontConfigure = true;
+  dontPatchElf = true;
 
   buildInputs = [
     sshUtilsOnly
@@ -26,8 +30,9 @@ stdenvNoCC.mkDerivation rec {
 
   installPhase = ''
     ### Make sshrm available
-    mkdir -p $out/bin $out/share/doc/${pname}
-    cp ${pname} $out/bin/${pname}
+    mkdir -p $out/bin
+    cp ${src} $out/bin/${pname}
+    chmod +x $out/bin/${pname}
   '';
 
   postFixup = ''
