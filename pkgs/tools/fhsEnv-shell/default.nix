@@ -5,6 +5,8 @@
   lib,
   libsForQt5,
   clang,
+  lld,
+  llvm,
   zlib,
   elfutils,
   pkgs,
@@ -19,6 +21,13 @@
   useClang ? false, # Enable this to use clang instead of gcc
   debian-tools ? false, # Add debian tools (to prepare debian package)
   redhat-tools ? false, # Add fedora and RHEL (and clone) tools (same as debian-tools option)
+
+  ### Extra packages to include in the FHS environment
+  ### Can be a list `[ pkgs.hello ]` or a function `pkgs: [ pkgs.hello ]`
+  extraPkgs ? [ ],
+
+  ### Extra shell commands to run at environment startup (before the prompt is set)
+  extraInitCommands ? "",
 }:
 
 let
@@ -43,10 +52,22 @@ stdenv.mkDerivation rec {
       with pkgs;
       [
         ### Core compilation tools (always included)
-        ### Compiler and tools
-        (if useClang then clang else stdenv.cc)
+        # Compiler and tools
+        # use clang.cc (unwrapped) when kernel-tools + useClang to avoid nixpkgs wrapper
+        # injecting NIX_CFLAGS_COMPILE which conflicts with kernel's -nostdlibinc
+        (if useClang then (if kernel-tools then clang.cc else clang) else stdenv.cc)
         pkg-config
-        gnumake
+        # Use clang instead of gcc
+        # make wrapper: kernel Makefile overrides CC=gcc (line 535),
+        # env var isn't enough — force CC=clang as command-line arg
+        (
+          if useClang then
+            pkgs.writeShellScriptBin "make" ''
+              exec ${gnumake}/bin/make CC=clang "$@"
+            ''
+          else
+            gnumake
+        )
         gnupatch
 
         ### Coreutils
@@ -113,9 +134,17 @@ stdenv.mkDerivation rec {
         autoconf
         automake
       ]
-      ++ lib.optionals useClang ([
-        clang-manpages
-      ])
+      ++ lib.optionals useClang (
+        [
+          clang-manpages
+
+          ### LLVM toolchain (linker, archiver, objcopy, etc.)
+          lld
+          llvm
+        ]
+        # include gcc for host tools (fixdep, etc.) that need proper include paths
+        ++ lib.optionals kernel-tools [ stdenv.cc ]
+      )
       ++ lib.optionals kernel-tools (
         [
           ### Kernel-specific tools (enabled with kernel-tools = true)
@@ -139,14 +168,13 @@ stdenv.mkDerivation rec {
         ++ pkgs.linux.nativeBuildInputs
       )
       ++ lib.optionals buildroot-tools ([
-        ### Buildroot-specific tools (enabled with buildroot-tools = true)
-        ### When kernel-tools is not used, include these tools in case
+        # Buildroot-specific tools
         flex
         bison
         gawk
         texinfo
 
-        ### Buildroot dependancies in additions to other tools
+        # Buildroot extra dependencies
         patchutils
         swig
         gperf
@@ -157,16 +185,16 @@ stdenv.mkDerivation rec {
         gmp
       ])
       ++ lib.optionals debian-tools ([
-        ### Debian package
         dpkg
 
-        ### Use glibc.dev to match with build-essential package on debian
+        # glibc.dev to match build-essential on debian
         glibc.dev
       ])
       ++ lib.optionals redhat-tools ([
-        ### RedHat package
+        # rpm for RedHat-family packaging
         rpm
-      ]);
+      ])
+      ++ (if builtins.isFunction extraPkgs then extraPkgs pkgs else extraPkgs);
 
     ### Shell script that run automacally when enterred in this environment
     runScript = pkgs.writeScript "init.sh" ''
@@ -179,6 +207,21 @@ stdenv.mkDerivation rec {
       ### Variable used for compilation
       export CC="${if useClang then "clang" else "gcc"}"
       export CXX="${if useClang then "clang++" else "g++"}"
+      ${lib.optionalString useClang ''
+        ### LLVM/Clang toolchain for kernel builds
+        ### Use individual vars instead of LLVM=1 because LLVM=1 overrides
+        ### HOSTCC=clang in the kernel Makefile, breaking host tools (fixdep, etc.)
+        ### that need gcc's include paths. Pass CC=clang + individual LLVM vars
+        ### instead of the LLVM=1 shorthand. HOSTCC defaults to gcc (stdenv.cc).
+        export CC=clang
+        export CXX=clang++
+        export LD=ld.lld
+        export AR=llvm-ar
+        export NM=llvm-nm
+        export OBJCOPY=llvm-objcopy
+        export OBJDUMP=llvm-objdump
+        export STRIP=llvm-strip
+      ''}
 
       ${lib.optionalString kernel-tools ''
         ### Special flags for kernel build (explicit path)
@@ -190,6 +233,11 @@ stdenv.mkDerivation rec {
         export LIBRARY_PATH="${zlib.out}/lib:${elfutils.out}/lib:$LIBRARY_PATH"
         export CFLAGS="-I${zlib.dev}/include -I${elfutils.dev}/include $CFLAGS"
         export LDFLAGS="-L${zlib.out}/lib -L${elfutils.out}/lib -lelf -lz $LDFLAGS"
+
+      ''}
+      ${lib.optionalString (extraInitCommands != "") ''
+        ### User-defined init commands
+        ${extraInitCommands}
       ''}
       ### Custom PS1 for the shell environment (NixOS style)
       export PROMPT_COMMAND='PS1="\[\e[1;32m\][fhsEnv-shell:\w]\$\[\e[0m\] "'

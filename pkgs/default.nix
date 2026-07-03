@@ -73,4 +73,9 @@ rec {
 
   # some-qt5-package = libsForQt5.callPackage ./some-qt5-package { };
   # ...
+  # Examples with extra options:
+  # fhsEnv-shell-custom = callPackage ./tools/fhsEnv-shell {
+  #   extraPkgs = pkgs: with pkgs; [ docker ripgrep jq ];
+  #   extraInitCommands = "alias ll='ls -la'";
+  # };
 }
