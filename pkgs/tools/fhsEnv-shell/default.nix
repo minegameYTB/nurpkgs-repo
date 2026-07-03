@@ -33,6 +33,33 @@
 let
   ### System configuration (host platform)
   system = lib.systems.elaborate stdenv.hostPlatform;
+
+  ### debhelper from Debian (dh_*, dh — needed by kernel's deb-pkg/rules)
+  debhelperPackage = let
+    dv = "13.14.1ubuntu5";
+  in
+    pkgs.runCommand "dh-${dv}" {
+      nativeBuildInputs = [ pkgs.dpkg ];
+    } ''
+      mkdir -p out
+      dpkg-deb -x ${pkgs.fetchurl {
+        url = "http://security.ubuntu.com/ubuntu/pool/main/d/debhelper/debhelper_${dv}_all.deb";
+        hash = "sha256-dX12KxKvHk1ZTqjCAMCjJ1Ueg89+jMdh25VUXj3sjVY=";
+      }} out
+      dpkg-deb -x ${pkgs.fetchurl {
+        url = "http://security.ubuntu.com/ubuntu/pool/main/d/debhelper/libdebhelper-perl_${dv}_all.deb";
+        hash = "sha256-F44uHFhfaYCljf4BkAQ/OY6we6vjNtjcH86sJ6eHuuM=";
+      }} out
+      mkdir -p $out/bin
+      for f in out/usr/bin/*; do
+        [ -f "$f" ] && cp "$f" "$out/bin/"
+      done
+      if [ -d out/usr/share/perl5 ]; then
+        mkdir -p $out/lib/perl5
+        cp -r out/usr/share/perl5/* $out/lib/perl5/
+      fi
+      rm -rf out
+    '';
 in
 stdenv.mkDerivation rec {
   pname = "fhsEnv-shell";
@@ -185,11 +212,19 @@ stdenv.mkDerivation rec {
         gmp
       ])
       ++ lib.optionals debian-tools ([
+        # wrapper must come before dpkg to take precedence in /bin
+        # -d skips build-dependency checks (no real dpkg database in FHS env)
+        # --admindir redirects to a writable path (FHS env /var is read-only)
+        (pkgs.writeShellScriptBin "dpkg-buildpackage" ''
+          DPKG_ADMINDIR="''${DPKG_ADMINDIR:-$HOME/.cache/fhsEnv/dpkg}"
+          exec ${dpkg}/bin/dpkg-buildpackage -d --admindir="$DPKG_ADMINDIR" "$@"
+        '')
         dpkg
-
-        # glibc.dev to match build-essential on debian
+        lsb-release
         glibc.dev
+        debhelperPackage
       ])
+
       ++ lib.optionals redhat-tools ([
         # rpm for RedHat-family packaging
         rpm
@@ -234,6 +269,34 @@ stdenv.mkDerivation rec {
         export CFLAGS="-I${zlib.dev}/include -I${elfutils.dev}/include $CFLAGS"
         export LDFLAGS="-L${zlib.out}/lib -L${elfutils.out}/lib -lelf -lz $LDFLAGS"
 
+      ''}
+      ${lib.optionalString (debian-tools || kernel-tools) ''
+        # kernel-tools enables make deb-pkg/make bindeb-pkg which call dpkg-buildpackage
+        # internally even without debian-tools enabled
+        # dpkg needs /var/lib/dpkg/status but /var is read-only in FHS env
+        # → redirect to a writable path via DPKG_ADMINDIR
+        export DPKG_ADMINDIR="$HOME/.cache/fhsEnv/dpkg"
+        mkdir -p "$DPKG_ADMINDIR"
+        if [ ! -f "$DPKG_ADMINDIR/status" ]; then
+          touch "$DPKG_ADMINDIR/status"
+        fi
+      ''}
+      ${lib.optionalString debian-tools ''
+        # nixpkgs lsb_release -cs may return a quoted codename (e.g. "yarara" on NixOS)
+        # which breaks debian/changelog format — force a clean distribution name
+        export KDEB_CHANGELOG_DIST=unstable
+        # Perl modules for dpkg (Dpkg::Arch, etc.) and debhelper (Debian::Debhelper::Dh_Lib, etc.)
+        export PERL5LIB="${pkgs.dpkg}/lib/perl5/site_perl:${debhelperPackage}/lib/perl5''${PERL5LIB:+:$PERL5LIB}"
+      ''}
+      ${lib.optionalString redhat-tools ''
+        # rpmbuild needs /var/lib/rpm which is read-only in FHS env
+        # → redirect via %_dbpath macro in ~/.rpmmacros
+        export RPMDB_DIR="$HOME/.cache/fhsEnv/rpm"
+        mkdir -p "$RPMDB_DIR"
+        echo '%_dbpath '"$RPMDB_DIR" > "$HOME/.rpmmacros"
+        if ! rpm --dbpath "$RPMDB_DIR" -qa >/dev/null 2>&1; then
+          rpm --dbpath "$RPMDB_DIR" --initdb 2>/dev/null || true
+        fi
       ''}
       ${lib.optionalString (extraInitCommands != "") ''
         ### User-defined init commands
