@@ -209,5 +209,6 @@ stdenv.mkDerivation rec {
     license = lib.licenses.gpl3;
     maintainers = with lib.maintainers; [ minegameYTB ];
     mainProgram = "fhsEnv-shell";
+    platforms = lib.platforms.linux;
   };
 }
