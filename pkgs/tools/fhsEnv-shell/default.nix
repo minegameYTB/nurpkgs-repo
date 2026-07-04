@@ -30,6 +30,10 @@
   extraPkgs ? [ ],
   ### Extra shell commands to run at environment startup (before the prompt is set)
   extraInitCommands ? "",
+
+  ### Extra bwrap arguments (list of strings) passed directly to bubblewrap
+  ### e.g. [ "--bind" "/tmp/cache" "/var/cache" ] to mount writable tmpfs
+  extraBwrapArgs ? [ ],
 }:
 
 let
@@ -79,7 +83,7 @@ if kernel-tools && !(system.isx86 or false) then
 else
   stdenv.mkDerivation rec {
     pname = "fhsEnv-shell";
-    version = "1.1.0";
+    version = "1.5.0";
 
     ### stdenv options
     dontUnpack = true;
@@ -326,6 +330,7 @@ else
         ### Exec bash from Nixpkgs/NixOS
         exec ${bashInteractive}/bin/bash
       '';
+      inherit extraBwrapArgs;
     };
 
     installPhase = ''

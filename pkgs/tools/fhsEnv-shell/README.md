@@ -57,6 +57,16 @@ Extra packages to include. Can be a list `[ pkgs.hello ]` or a function `pkgs: [
 
 Shell commands to run at environment startup (before the prompt is set).
 
+### `extraBwrapArgs` (default: `[]`)
+
+Extra arguments passed directly to bubblewrap (bwrap). Useful for mounting tmpfs, bind-mounting host paths, or adjusting container isolation.
+
+```nix
+extraBwrapArgs = [ "--tmpfs" "/mnt/cache" ];
+```
+
+Note: `--bind` requires the target path to already exist inside the FHS env; use `--tmpfs` for new directories.
+
 ## Examples
 
 ### Custom FHS env
