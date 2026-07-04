@@ -29,6 +29,8 @@ nix run "github:minegameYTB/nurpkgs-repo#dev.fhsEnv-shell"
 
 Adds kernel build dependencies (Qt5 for `xconfig`, libcap-ng, pciutils, syslinux, cdrkit, OpenSSL/ncurses headers) and sets `PKG_CONFIG_PATH`, `CFLAGS`, `LDFLAGS` for zlib and elfutils.
 
+Note: boot image targets (`isoimage`, `hdimage`, `fdimage`, `bzdisk`) are x86-only. The package enforces this with a build-time assertion on non-x86 platforms. Use `extraPkgs` to add custom ISO creation tools on other architectures.
+
 ### `useClang` (default: `false`)
 
 Use clang/LLVM instead of gcc. Adds `lld`, `llvm`, and `clang-manpages`. Sets `CC=clang`, `LD=ld.lld`, `AR=llvm-ar`, `NM=llvm-nm`, etc. in the environment.
