@@ -15,6 +15,7 @@
   gzip,
   xz,
   zstd,
+  zfs,
 }:
 
 stdenvNoCC.mkDerivation rec {
@@ -37,6 +38,7 @@ stdenvNoCC.mkDerivation rec {
     gzip
     xz
     zstd
+    zfs
     makeWrapper
   ];
 
@@ -69,6 +71,7 @@ stdenvNoCC.mkDerivation rec {
           gzip
           xz
           zstd
+          zfs
         ]
       }
   '';

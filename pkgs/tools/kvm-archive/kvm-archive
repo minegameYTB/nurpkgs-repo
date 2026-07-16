@@ -4,7 +4,7 @@
 #
 # Usage:
 #   ./kvm-archive.sh export <vm_name> [destination_dir] [--format gz|xz|zst] [--level 1-9]
-#   ./kvm-archive.sh import <archive.tar.gz|xz|zst> [--pool <pool_name>] [--name <new_name>]
+#   ./kvm-archive.sh import <archive.tar.gz|xz|zst> [--pool <pool_name>] [--name <new_name>] [--zfs-pool <pool>]
 #   ./kvm-archive.sh list
 #   ./kvm-archive.sh help
 
@@ -105,6 +105,26 @@ get_disk_paths() {
 }
 
 # ─────────────────────────────────────────────
+# ZVOL/ZFS HELPERS
+# ─────────────────────────────────────────────
+
+# Returns true if path is a ZFS zvol (/dev/zvol/…)
+is_zvol_path() {
+  [[ "$1" == /dev/zvol/* ]]
+}
+
+# Extract ZFS dataset name from a /dev/zvol/ path
+#   /dev/zvol/tank/vms/myvm/disk0 → tank/vms/myvm/disk0
+get_zvol_dataset() {
+  echo "${1#/dev/zvol/}"
+}
+
+# Get volsize (bytes) for a ZFS zvol dataset
+get_zvol_size() {
+  zfs get -Hp volsize "$1" 2>/dev/null | awk '{print $3}' || echo "0"
+}
+
+# ─────────────────────────────────────────────
 # COMMAND: LIST
 # ─────────────────────────────────────────────
 
@@ -165,7 +185,8 @@ cmd_export() {
   # Work dir on the destination to avoid /tmp (often a tmpfs on NixOS)
   local work_dir="${dest_dir}/.kvm-archive-work-${archive_name}"
   mkdir -p "$work_dir" || die "Cannot create work directory in '$dest_dir'."
-  trap 'rm -rf "$work_dir"' EXIT
+  local zfs_cleanup=""
+  trap 'rm -rf "$work_dir"; for __z in $zfs_cleanup; do zfs destroy "$__z" 2>/dev/null || true; done' EXIT
 
   local vm_dir="${work_dir}/${archive_name}"
   mkdir -p "$vm_dir"
@@ -213,12 +234,64 @@ cmd_export() {
   : > "$index_file"
 
   for disk_path in "${disks[@]}"; do
+    local disk_format="" disk_filename=""
+
+    # ── ZVOL DISK ──
+    if is_zvol_path "$disk_path"; then
+      if command -v zfs &>/dev/null; then
+        local zfs_dataset zfs_volsize snapshot_name
+        zfs_dataset="$(get_zvol_dataset "$disk_path")"
+        zfs_volsize="$(get_zvol_size "$zfs_dataset")"
+        snapshot_name="kvm-archive-${TIMESTAMP}"
+
+        log_info "Creating ZFS snapshot: ${zfs_dataset}@${snapshot_name}..."
+        zfs snapshot "${zfs_dataset}@${snapshot_name}" \
+          || die "Failed to create ZFS snapshot for '$zfs_dataset'."
+        zfs_cleanup="$zfs_cleanup ${zfs_dataset}@${snapshot_name}"
+
+        local disk_basename
+        disk_basename="$(basename "$disk_path")"
+        disk_filename="${disk_basename}.zfs"
+        log_info "Saving ZFS stream to: ${disk_filename}..."
+        if ! zfs send "${zfs_dataset}@${snapshot_name}" > "${disks_dir}/${disk_filename}"; then
+          zfs destroy "${zfs_dataset}@${snapshot_name}" 2>/dev/null || true
+          die "Failed to send ZFS snapshot '$zfs_dataset'."
+        fi
+
+        zfs destroy "${zfs_dataset}@${snapshot_name}" 2>/dev/null \
+          || log_warn "Could not destroy temporary snapshot ${snapshot_name}."
+
+        disk_format="zfs"
+        echo "${disk_path}|${disk_filename}|${disk_format}|${zfs_dataset}|${snapshot_name}|${zfs_volsize}" >> "$index_file"
+        log_ok "Zvol saved: $disk_path (dataset: $zfs_dataset)"
+      else
+        log_warn "'zfs' command not found. Falling back to qemu-img convert for zvol: $disk_path"
+        if [[ ! -b "$disk_path" ]]; then
+          log_warn "Block device not found, skipping: $disk_path"
+          continue
+        fi
+        disk_format="$(qemu-img info "$disk_path" 2>/dev/null | awk -F': ' '/^file format:/ { print $2 }')"
+        disk_format="${disk_format:-raw}"
+        disk_filename="$(basename "$disk_path")"
+
+        log_info "Copying zvol (fallback): $disk_path (format: $disk_format)..."
+        qemu-img convert -O "$disk_format" -p \
+          "$disk_path" \
+          "${disks_dir}/${disk_filename}" \
+          || die "Failed to copy zvol '$disk_path'."
+
+        echo "${disk_path}|${disk_filename}|${disk_format}" >> "$index_file"
+        log_ok "Zvol copied (fallback): $disk_filename"
+      fi
+      continue
+    fi
+
+    # ── REGULAR FILE DISK ──
     if [[ ! -f "$disk_path" ]]; then
       log_warn "Disk not found, skipping: $disk_path"
       continue
     fi
 
-    local disk_format disk_filename
     disk_format="$(qemu-img info "$disk_path" | awk -F': ' '/^file format:/ { print $2 }')"
     disk_filename="$(basename "$disk_path")"
 
@@ -272,6 +345,7 @@ cmd_import() {
   local archive_path=""
   local target_pool="$DEFAULT_POOL"
   local new_vm_name=""
+  local zfs_pool=""
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -285,6 +359,11 @@ cmd_import() {
         shift
         new_vm_name="${1:-}"
         [[ -z "$new_vm_name" ]] && die "--name requires a VM name."
+        ;;
+      --zfs-pool)
+        shift
+        zfs_pool="${1:-}"
+        [[ -z "$zfs_pool" ]] && die "--zfs-pool requires a pool name."
         ;;
       -*) die "Unknown option: $1" ;;
       *)  archive_path="$1" ;;
@@ -308,7 +387,8 @@ cmd_import() {
   local archive_dir work_dir
   archive_dir="$(dirname "$archive_path")"
   work_dir="$(mktemp -d "${archive_dir}/.kvm-import-work-XXXXXX")"
-  trap 'rm -rf "$work_dir"' EXIT
+  local zfs_cleanup=""
+  trap 'rm -rf "$work_dir"; for __z in $zfs_cleanup; do zfs destroy -r "$__z" 2>/dev/null || true; done' EXIT
 
   log_info "Extracting archive..."
   local arc_size
@@ -352,11 +432,82 @@ cmd_import() {
   if [[ -f "$index_file" ]]; then
     log_info "Restoring disks to pool '$target_pool' ($pool_path)..."
 
-    # index format: original_path|filename|format
-    while IFS='|' read -r original_path disk_filename disk_format; do
+    # index format: original_path|filename|format[|zfs_dataset|zfs_snapshot|zfs_volsize]
+    while IFS='|' read -r original_path disk_filename disk_format zfs_dataset zfs_snapshot zfs_volsize; do
       local src_disk="${disks_dir}/${disk_filename}"
 
-      # If --name was given, replace the original VM name in the disk filename
+      # ── ZVOL RESTORE (ZFS stream) ──
+      if [[ "$disk_format" == "zfs" ]]; then
+        if command -v zfs &>/dev/null; then
+          [[ ! -f "$src_disk" ]] && { log_warn "ZFS stream missing: $disk_filename — skipping."; continue; }
+
+          local target_dataset="$zfs_dataset"
+
+          # Handle --zfs-pool: replace dataset prefix (everything before last component)
+          #   zroot/zvol/vm/debian --zfs-pool tank/vms  →  tank/vms/debian
+          #   zroot/zvol/vm/debian --zfs-pool zroot/zvol/vm  →  zroot/zvol/vm/debian
+          if [[ -n "$zfs_pool" ]]; then
+            local zvol_name="${target_dataset##*/}"
+            target_dataset="${zfs_pool}/${zvol_name}"
+          fi
+
+          local pool="${target_dataset%%/*}"
+
+          # Handle --name: replace original VM name in dataset path
+          if [[ -n "$new_vm_name" ]]; then
+            target_dataset="${target_dataset/$original_vm_name/$new_vm_name}"
+          fi
+
+          log_info "Restoring ZFS dataset: $target_dataset"
+
+          # Create temp parent for receive (allows clean rename later)
+          local temp_parent="kvm-import-tmp-${TIMESTAMP}"
+          if ! zfs create -p "${pool}/${temp_parent}" 2>/dev/null; then
+            log_error "Failed to create temporary ZFS dataset. Is pool '$pool' available?"
+            die "ZFS pool '$pool' may need to be imported first."
+          fi
+          zfs_cleanup="$zfs_cleanup ${pool}/${temp_parent}"
+
+          # Receive stream with -d (discard pool, use temp_parent as parent)
+          if ! zfs receive -F -d "${pool}/${temp_parent}" < "$src_disk" 2>/dev/null; then
+            zfs destroy -r "${pool}/${temp_parent}" 2>/dev/null || true
+            die "Failed to receive ZFS stream for '$disk_filename'."
+          fi
+
+          # Received at: pool/temp_parent/<rest_of_zfs_dataset_without_pool>
+          local received_dataset="${pool}/${temp_parent}/${zfs_dataset#*/}"
+
+          # Create final parent datasets
+          local final_parent="${target_dataset%/*}"
+          if [[ "$final_parent" != "$target_dataset" ]]; then
+            zfs create -p "$final_parent" 2>/dev/null || true
+          fi
+
+          # Rename to final location
+          if ! zfs rename "$received_dataset" "$target_dataset" 2>/dev/null; then
+            zfs destroy -r "${pool}/${temp_parent}" 2>/dev/null || true
+            die "Failed to rename dataset to '$target_dataset'."
+          fi
+
+          # Clean up temp parent
+          zfs destroy -r "${pool}/${temp_parent}" 2>/dev/null \
+            || log_warn "Could not clean up temporary dataset '${pool}/${temp_parent}'."
+
+          # Update XML with new zvol path if changed
+          local new_dev_path="/dev/zvol/${target_dataset}"
+          if [[ "$original_path" != "$new_dev_path" ]]; then
+            log_info "Updating path in vm.xml: $original_path → $new_dev_path"
+            sed -i "s|${original_path}|${new_dev_path}|g" "$xml_file"
+          fi
+
+          log_ok "Zvol restored: $target_dataset"
+        else
+          log_warn "'zfs' command not found. Cannot restore zvol '$disk_filename'. Skipping."
+        fi
+        continue
+      fi
+
+      # ── REGULAR FILE RESTORE ──
       local dest_filename="$disk_filename"
       if [[ -n "$new_vm_name" ]]; then
         dest_filename="${disk_filename/$original_vm_name/$new_vm_name}"
@@ -370,7 +521,9 @@ cmd_import() {
       fi
 
       log_info "Restoring: $disk_filename → $dest_filename (format: $disk_format)..."
-      qemu-img convert -O "$disk_format" -p         "$src_disk" "$dest_disk"         || die "Failed to restore disk '$disk_filename'."
+      qemu-img convert -O "$disk_format" -p \
+        "$src_disk" "$dest_disk" \
+        || die "Failed to restore disk '$disk_filename'."
 
       log_ok "Disk restored: $dest_disk"
 
@@ -424,14 +577,17 @@ cmd_help() {
   echo -e "  ${GREEN}export${RESET} <vm_name> [destination_dir] [--format gz|xz|zst] [--level 1-9]"
   echo -e "      Export a VM (XML + disks) to a compressed archive."
   echo -e "      • Gracefully stops the VM if running, restarts it after."
+  echo -e "      • ZFS zvol disks are backed up via zfs snapshot + send (efficient)."
+  echo -e "      • Falls back to qemu-img convert if 'zfs' command is unavailable."
   echo -e "      • Default destination: ${DEFAULT_EXPORT_DIR}"
   echo -e "      • Default format: gz (level 6) — xz for best ratio, zst for best speed."
   echo -e ""
-  echo -e "  ${GREEN}import${RESET} <archive.tar.gz|xz|zst> [--pool <pool_name>] [--name <new_name>]"
+  echo -e "  ${GREEN}import${RESET} <archive.tar.gz|xz|zst> [--pool <pool_name>] [--name <new_name>] [--zfs-pool <pool>]"
   echo -e "      Import a VM from an archive created by this script."
   echo -e "      • Disks are restored into the target libvirt pool."
   echo -e "      • Default pool: ${DEFAULT_POOL}"
   echo -e "      • Use --name <new_name> to rename the VM on import."
+  echo -e "      • Use --zfs-pool <pool> to restore zvols into a different ZFS pool."
   echo -e ""
   echo -e "  ${GREEN}help${RESET}"
   echo -e "      Show this help."
@@ -444,9 +600,12 @@ cmd_help() {
   echo -e "  sudo ${SCRIPT_NAME} import ~/archives/myVM_20260101_120000.tar.gz"
   echo -e "  sudo ${SCRIPT_NAME} import ~/archives/myVM_20260101_120000.tar.gz --pool ssd-pool"
   echo -e "  sudo ${SCRIPT_NAME} import ~/archives/myVM_20260101_120000.tar.gz --name myVM-clone"
+  echo -e "  sudo ${SCRIPT_NAME} import ~/archives/myVM_20260101_120000.tar.gz --zfs-pool ssd"
+  echo -e "  sudo ${SCRIPT_NAME} import ~/archives/myVM_20260101_120000.tar.gz --zfs-pool ssd --name myVM-clone"
   echo -e ""
   echo -e "${BOLD}DEPENDENCIES${RESET}"
   echo -e "  Required : virsh, qemu-img, tar, gzip, pv, xz, zstd"
+  echo -e "  Required for zvols : zfs"
   echo -e "  On NixOS : nix-shell -p libvirt qemu pv xz zstd"
   echo -e ""
 }
