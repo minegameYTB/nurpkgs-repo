@@ -22,7 +22,9 @@ stdenvNoCC.mkDerivation rec {
   pname = "kvm-archive";
   version = "0.0.0";
 
-  src = ./kvm-archive;
+  src = ./.;
+
+  dontUnpack = true;
 
   buildInputs = [
     coreutils
@@ -39,23 +41,20 @@ stdenvNoCC.mkDerivation rec {
     xz
     zstd
     zfs
-    makeWrapper
   ];
 
-  dontUnpack = true;
+  nativeBuildInputs = [ makeWrapper ];
 
   installPhase = ''
-    ### Make gsettings-diff available
-    mkdir -p $out/bin
-    cp ${src} $out/bin/${pname}
-
-    ### Change to executable file
+    mkdir -p $out/bin $out/lib/kvm-archive
+    cp $src/src/kvm-archive $out/bin/${pname}
     chmod +x $out/bin/${pname}
+    cp $src/src/lib/*.sh $out/lib/kvm-archive/
   '';
 
   postFixup = ''
-    ### Add runtime path to gsettings-diff wrapper
     wrapProgram $out/bin/${pname} \
+      --set KVM_ARCHIVE_LIB_DIR $out/lib/kvm-archive \
       --set PATH ${
         lib.makeBinPath [
           coreutils
