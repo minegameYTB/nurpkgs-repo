@@ -23,6 +23,19 @@ nix run "github:minegameYTB/nurpkgs-repo#dev.fhsEnv-shell"
 | All features | `nix run ".#dev.fhsEnv-shell-all-specific"` |
 | All (no kernel) | `nix run ".#dev.fhsEnv-shell-all-specific-nokrnl"` |
 
+### Pre-built variants (32-bit mirror `i686`)
+
+All `i686` variants are under `dev.i686` and include `debian-tools`+`redhat-tools`+`i686Support` by default.
+
+| Variant | Command |
+|---|---|
+| Default 32-bit | `nix run ".#dev.i686.fhsEnv-shell"` |
+| With clang 32-bit | `nix run ".#dev.i686.fhsEnv-shell-clang"` |
+| + kernel-tools 32-bit | `nix run ".#dev.i686.fhsEnv-shell-krnl"` |
+| + buildroot 32-bit | `nix run ".#dev.i686.fhsEnv-shell-buildroot"` |
+| All 32-bit | `nix run ".#dev.i686.fhsEnv-shell-all-specific"` |
+| All 32-bit (clang) | `nix run ".#dev.i686.fhsEnv-shell-all-clang"` |
+
 ## Options
 
 ### `kernel-tools` (default: `false`)
@@ -48,6 +61,10 @@ Adds `dpkg` and `glibc.dev`.
 ### `redhat-tools` (default: `false`)
 
 Adds `rpm`.
+
+### `i686Support` (default: `false`)
+
+Enable 32-bit glibc and multilib for `/lib/ld-linux.so.2`. Always present via `pkgs.pkgsi686Linux.glibc` (`/lib/ld-linux.so.2`), with `i686Support` adds `glibc.dev`, `zlib` 32-bit and dev headers for `gcc -m32`. Used by `dev.i686.*` mirror which also forces `debian-tools`+`redhat-tools`.
 
 ### `extraPkgs` (default: `[]`)
 
