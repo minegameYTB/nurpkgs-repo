@@ -34,6 +34,7 @@
               deadnix
               findutils
               git
+              jq
               cacert
               gnupg
             ];
