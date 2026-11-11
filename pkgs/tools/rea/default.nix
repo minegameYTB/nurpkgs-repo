@@ -5,7 +5,13 @@
   fetchFromGitHub,
   fetchurl,
   autoPatchelfHook,
-  nodejs_26,
+  makeWrapper,
+  nodejs_22 ? null,
+  nodejs_24 ? null,
+  nodejs_26 ? null,
+  ghidra ? null,
+  withGhidra ? false,
+  extraPackages ? [ ],
 }:
 
 let
@@ -54,7 +60,10 @@ buildNpmPackage rec {
   };
 
   ### REA requires ^22.23.4 || ^24.22.1 || >=26.12.1
-  nodejs = nodejs_26;
+  nodejs =
+    if nodejs_26 != null then nodejs_26
+    else if nodejs_24 != null then nodejs_24
+    else nodejs_22;
   npmDepsHash = "sha256-3WPXD+qm5WVfrTEvepKwX5RZBfbLBcPB0uDmKIx4MR8=";
 
   ### Build the same way as the upstream CI (Turbo compile + generated skills)
@@ -63,7 +72,7 @@ buildNpmPackage rec {
   ### Native install scripts cannot download prebuilt binaries in the sandbox
   npmRebuildFlags = [ "--ignore-scripts" ];
 
-  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+  nativeBuildInputs = [ makeWrapper ] ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
   ### Avoid running lifecycle scripts again during packaging
@@ -88,6 +97,20 @@ buildNpmPackage rec {
     TURBO_CACHE = "local:rw";
   };
 
+  postInstall =
+    let
+      runtimePackages =
+        extraPackages
+        ++ lib.optional (withGhidra && ghidra != null) ghidra;
+    in
+    lib.optionalString (runtimePackages != [ ]) ''
+      for prog in "$out"/bin/*; do
+        [ -x "$prog" ] || continue
+        wrapProgram "$prog" \
+          --prefix PATH : ${lib.makeBinPath runtimePackages}
+      done
+    '';
+
   meta = {
     description = "Reverse engineer anything from your terminal or agent with one CLI and MCP server";
     homepage = "https://github.com/morluto/rea";
@@ -103,5 +126,6 @@ buildNpmPackage rec {
       lib.sourceTypes.fromSource
       lib.sourceTypes.binaryNativeCode
     ];
+    broken = nodejs == null;
   };
 }
