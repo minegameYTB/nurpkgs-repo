@@ -55,7 +55,7 @@ buildNpmPackage rec {
   src = fetchFromGitHub {
     owner = "morluto";
     repo = "rea";
-    tag = "rea-agents-${version}";
+    rev = "rea-agents-${version}";
     hash = "sha256-2ADn3U3lvUoB4tCEpzO0rMfYE4sis+5uBiEazcp0gpI=";
   };
 
