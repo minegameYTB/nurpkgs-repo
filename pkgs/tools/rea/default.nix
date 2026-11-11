@@ -60,10 +60,21 @@ buildNpmPackage rec {
   };
 
   ### REA requires ^22.23.4 || ^24.22.1 || >=26.12.1
-  nodejs =
-    if nodejs_26 != null then nodejs_26
-    else if nodejs_24 != null then nodejs_24
-    else nodejs_22;
+  compatibleNodejs =
+    let
+      versionAtLeast = lib.versionAtLeast or (a: b: (builtins.compareVersions a b) >= 0);
+      isCompatible = n:
+        n != null
+        && (
+          (lib.hasPrefix "26." n.version && versionAtLeast n.version "26.12.1")
+          || (lib.hasPrefix "24." n.version && versionAtLeast n.version "24.22.1")
+          || (lib.hasPrefix "22." n.version && versionAtLeast n.version "22.23.4")
+        );
+      candidates = builtins.filter isCompatible [ nodejs_26 nodejs_24 nodejs_22 ];
+    in
+      if candidates == [ ] then null else builtins.head candidates;
+
+  nodejs = if compatibleNodejs != null then compatibleNodejs else nodejs_26;
   npmDepsHash = "sha256-3WPXD+qm5WVfrTEvepKwX5RZBfbLBcPB0uDmKIx4MR8=";
 
   ### Build the same way as the upstream CI (Turbo compile + generated skills)
@@ -126,6 +137,6 @@ buildNpmPackage rec {
       lib.sourceTypes.fromSource
       lib.sourceTypes.binaryNativeCode
     ];
-    broken = nodejs == null;
+    broken = compatibleNodejs == null;
   };
 }
