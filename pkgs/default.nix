@@ -1,10 +1,36 @@
-{
-  lib,
-  callPackage,
-  pkgs,
-}:
+{ lib, pkgs }:
 
+let
+  ### Vendored gtk2 (see pkgs/buildSupport/gtk2): nixpkgs marks it broken
+  ### and will remove it (NixOS/nixpkgs#410814), but legacy consumers
+  ### (bizhawk/mono WinForms, old GTK2 apps) still need libgtk-x11-2.0.so.
+  ### The warning fires on every evaluation to remind that this is a legacy
+  ### fallback — not recommended for new packages, prefer gtk3/gtk4 when
+  ### possible.
+  gtk2 =
+    lib.warn
+      "nurpkgs: using the vendored gtk2 2.24.33 (nixpkgs drops it: NixOS/nixpkgs#410814). Legacy fallback only — not recommended for new packages, prefer gtk3/gtk4 when possible."
+      (pkgs.callPackage ./buildSupport/gtk2 { });
+
+  ### callPackage with repo defaults: packages asking for `gtk2` or
+  ### `gtk2-x11` pick up the vendored copy above automatically (an explicit
+  ### argument still wins), so old GTK2 software keeps evaluating after
+  ### nixpkgs removes gtk2. `callPackageWith` filters the injected defaults
+  ### through `functionArgs`, unlike explicit arguments, so packages that
+  ### do not take gtk2 are unaffected.
+  callPackage =
+    f: args:
+    lib.callPackageWith (
+      pkgs
+      // {
+        inherit gtk2;
+        gtk2-x11 = gtk2;
+      }
+    ) f args;
+in
 rec {
+  inherit gtk2;
+
   ### Utilities
   sshrm = callPackage ./tools/sshrm { };
   GLFfetch = callPackage ./misc/GLFfetch { };
@@ -20,6 +46,10 @@ rec {
     ### Ghidra 12.2 requires application.java.min=25; pkgs.jdk may be older.
     // lib.optionalAttrs (pkgs ? jdk25) { jdk = pkgs.jdk25; }
   );
+
+  ### Emulators & MCP
+  bizhawk = callPackage ./tools/bizhawk { };
+  mcp-bizhawk = callPackage ./tools/mcp-bizhawk { };
 
   ### dev set
   dev = rec {
