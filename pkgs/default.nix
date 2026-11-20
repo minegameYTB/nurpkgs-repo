@@ -4,13 +4,27 @@ let
   ### Vendored gtk2 (see pkgs/buildSupport/gtk2): nixpkgs marks it broken
   ### and will remove it (NixOS/nixpkgs#410814), but legacy consumers
   ### (bizhawk/mono WinForms, old GTK2 apps) still need libgtk-x11-2.0.so.
-  ### The warning fires on every evaluation to remind that this is a legacy
-  ### fallback — not recommended for new packages, prefer gtk3/gtk4 when
-  ### possible.
+  ### The warning is attached to each output's outPath/drvPath instead of
+  ### the value itself: it fires on real consumption (builds, string
+  ### interpolation, CI's nix-env -qa --drv-path, direct .drvPath access)
+  ### but stays silent when the package set is merely enumerated (the
+  ### flake's `packages` filter forces every attribute, which would
+  ### otherwise warn on builds that do not use gtk2 at all).
+  ### Legacy fallback only — not recommended for new packages, prefer
+  ### gtk3/gtk4 when possible.
   gtk2 =
-    lib.warn
-      "nurpkgs: using the vendored gtk2 2.24.33 (nixpkgs drops it: NixOS/nixpkgs#410814). Legacy fallback only — not recommended for new packages, prefer gtk3/gtk4 when possible."
-      (pkgs.callPackage ./buildSupport/gtk2 { });
+    let
+      drv = pkgs.callPackage ./buildSupport/gtk2 { };
+      msg = "nurpkgs: using the vendored gtk2 2.24.33 (nixpkgs drops it: NixOS/nixpkgs#410814). Legacy fallback only — not recommended for new packages, prefer gtk3/gtk4 when possible.";
+      warnOutput =
+        d:
+        d
+        // {
+          outPath = lib.warn msg d.outPath;
+          drvPath = lib.warn msg d.drvPath;
+        };
+    in
+    warnOutput drv // { dev = warnOutput drv.dev; };
 
   ### callPackage with repo defaults: packages asking for `gtk2` or
   ### `gtk2-x11` pick up the vendored copy above automatically (an explicit

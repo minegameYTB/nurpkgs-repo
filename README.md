@@ -37,8 +37,8 @@ Legacy apps that still load `libgtk-x11-2.0.so` (mono/WinForms, bizhawk,
 old editors, theme engines…) would break. This repo keeps them working:
 
 - **`gtk2`** — vendored copy of nixpkgs' gtk2 expression
-  (`pkgs/buildSupport/gtk2`), exposed with an evaluation warning: legacy
-  fallback only, prefer gtk3/gtk4 for new packages. The repo-local
+  (`pkgs/buildSupport/gtk2`), warning on use: legacy fallback only,
+  prefer gtk3/gtk4 for new packages. The repo-local
   `callPackage` injects it, so old GTK2 packages keep evaluating after
   nixpkgs drops the attribute.
 - **`gtk2-ng`** — experimental: [gtk2-ng](https://git.devuan.org/Daemonratte/gtk2-ng),
