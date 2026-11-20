@@ -31,6 +31,12 @@ in
 rec {
   inherit gtk2;
 
+  ### Experimental drop-in fork of gtk2 (see pkgs/buildSupport/gtk2-ng):
+  ### same libgtk-x11-2.0.so ABI, still actively maintained upstream while
+  ### GTK2 is EOL. Pinned to a git commit (upstream has no tags). Not wired
+  ### by default — opt in per package, e.g. bizhawk-gtk2ng below.
+  gtk2-ng = callPackage ./buildSupport/gtk2-ng { };
+
   ### Utilities
   sshrm = callPackage ./tools/sshrm { };
   GLFfetch = callPackage ./misc/GLFfetch { };
@@ -49,6 +55,9 @@ rec {
 
   ### Emulators & MCP
   bizhawk = callPackage ./tools/bizhawk { };
+  ### Same build, but mono's WinForms loads gtk2-ng instead of the vendored
+  ### gtk2 (drop-in: same SONAME/version; gtk2-ng still gets security fixes).
+  bizhawk-gtk2ng = callPackage ./tools/bizhawk { gtk2-x11 = gtk2-ng; };
   mcp-bizhawk = callPackage ./tools/mcp-bizhawk { };
 
   ### dev set
